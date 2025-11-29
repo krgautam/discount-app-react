@@ -1,4 +1,4 @@
-import { Collection, DiscountClass } from "app/types/admin.types";
+import { Collection, DiscountClass } from "app/types/admin.types.d";
 import {
   type ActionFunctionArgs,
   type LoaderFunctionArgs,
@@ -9,7 +9,6 @@ import {
 
 import { DiscountForm } from "../components/DiscountForm/DiscountForm";
 import { NotFoundPage } from "../components/NotFoundPage";
-import { getCollectionsByIds } from "../models/collections.server";
 import {
   getDiscount,
   updateAutomaticDiscount,
@@ -47,10 +46,11 @@ interface LoaderData {
       orderPercentage: number;
       deliveryPercentage: number;
       metafieldId: string;
-      collectionIds: string[];
+      productIds: string[];
+      quantity?: number;
     };
   } | null;
-  collections: Collection[];
+  products: Collection[];
 }
 
 export const action = async ({ params, request }: ActionFunctionArgs) => {
@@ -91,7 +91,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
     cartLinePercentage: parseFloat(configuration.cartLinePercentage),
     orderPercentage: parseFloat(configuration.orderPercentage),
     deliveryPercentage: parseFloat(configuration.deliveryPercentage),
-    collectionIds: configuration.collectionIds || [],
+    productIds: configuration.productIds || [],
+    quantity: parseInt(configuration.quantity || "1", 10),
   };
 
   let result;
@@ -126,22 +127,16 @@ export const loader = async ({ params, request }: LoaderFunctionArgs) => {
 
   const { discount } = await getDiscount(request, id);
 
-  // Fetch collections if they exist in the configuration
-  const collections = discount?.configuration?.collectionIds
-    ? await getCollectionsByIds(
-        request,
-        discount.configuration.collectionIds.map((id: string) =>
-          id.startsWith("gid://") ? id : `gid://shopify/Collection/${id}`,
-        ),
-      )
-    : [];
+  // Product IDs are stored in the configuration, no need to fetch products
+  // as they will be loaded via the resource picker when editing
+  const products: Collection[] = [];
 
-  return { discount, collections };
+  return { discount, products };
 };
 
 export default function VolumeEdit() {
   const actionData = useActionData<ActionData>();
-  const { discount: rawDiscount, collections } = useLoaderData<LoaderData>();
+  const { discount: rawDiscount, products } = useLoaderData<LoaderData>();
   const navigation = useNavigation();
   const isLoading = navigation.state === "submitting";
   const submitErrors =
@@ -174,7 +169,8 @@ export default function VolumeEdit() {
       orderPercentage: String(rawDiscount.configuration.orderPercentage),
       deliveryPercentage: String(rawDiscount.configuration.deliveryPercentage),
       metafieldId: rawDiscount.configuration.metafieldId,
-      collectionIds: rawDiscount.configuration.collectionIds || [],
+      productIds: rawDiscount.configuration.productIds || [],
+      quantity: String(rawDiscount.configuration.quantity || 1),
     },
   };
 
@@ -188,7 +184,7 @@ export default function VolumeEdit() {
 
       <DiscountForm
         initialData={initialData}
-        collections={collections}
+        collections={products}
         isEditing={true}
         isLoading={isLoading}
         submitErrors={submitErrors}

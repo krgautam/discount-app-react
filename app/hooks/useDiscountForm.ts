@@ -1,18 +1,18 @@
 import { useCallback, useState } from "react";
 import { useSubmit } from "react-router";
 
-import { DiscountClass } from "../types/admin.types";
+import { DiscountClass } from "../types/admin.types.d";
 import { DiscountMethod } from "../types/types";
-
-interface Collection {
-  id: string;
-  title: string;
-}
 
 interface CombinesWith {
   orderDiscounts: boolean;
   productDiscounts: boolean;
   shippingDiscounts: boolean;
+}
+
+interface Product {
+  id: string;
+  title: string;
 }
 
 interface DiscountConfiguration {
@@ -21,8 +21,8 @@ interface DiscountConfiguration {
   orderPercentage: string;
   deliveryPercentage: string;
   metafieldId?: string;
-  collectionIds?: string[];
-  collections?: Collection[];
+  productIds?: string[];
+  products?: Product[];
 }
 
 interface FormState {
@@ -59,7 +59,7 @@ interface UseDiscountFormProps {
       orderPercentage: string;
       deliveryPercentage: string;
       metafieldId?: string;
-      collectionIds?: string[];
+      productIds?: string[];
     };
   };
   onSubmit?: () => void;
@@ -73,7 +73,7 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
     title: initialData?.title ?? "",
     method: initialData?.method ?? DiscountMethod.Code,
     code: initialData?.code ?? "",
-    discountClasses: initialData?.discountClasses ?? [],
+    discountClasses: initialData?.discountClasses ?? [DiscountClass.Product],
     combinesWith: initialData?.combinesWith ?? {
       orderDiscounts: false,
       productDiscounts: false,
@@ -92,7 +92,7 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
       deliveryPercentage:
         initialData?.configuration.deliveryPercentage?.toString() ?? "0",
       metafieldId: initialData?.configuration.metafieldId,
-      collectionIds: initialData?.configuration.collectionIds ?? [],
+      productIds: initialData?.configuration.productIds ?? [],
     },
   }));
 
@@ -106,7 +106,7 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
   const setConfigField = useCallback(
     (
       field: keyof DiscountConfiguration,
-      value: string | string[] | Collection[],
+      value: string | string[] | Product[],
     ) => {
       setFormState((prev) => ({
         ...prev,
@@ -155,7 +155,7 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
           deliveryPercentage: parseFloat(
             formState.configuration.deliveryPercentage,
           ),
-          collectionIds: formState.configuration.collectionIds,
+          productIds: formState.configuration.productIds,
         },
       }),
     );

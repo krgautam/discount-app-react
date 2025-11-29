@@ -10,6 +10,7 @@ import {
   createCodeDiscount,
   createAutomaticDiscount,
 } from "../models/discounts.server";
+import { DiscountClass } from "../types/admin.types.d";
 import { DiscountMethod } from "../types/types";
 import { returnToDiscounts } from "../utils/navigation";
 
@@ -61,7 +62,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
         cartLinePercentage: parseFloat(configuration.cartLinePercentage),
         orderPercentage: parseFloat(configuration.orderPercentage),
         deliveryPercentage: parseFloat(configuration.deliveryPercentage),
-        collectionIds: configuration.collectionIds || [],
+        productIds: configuration.productIds || [],
+        quantity: parseInt(configuration.quantity || "1", 10),
       },
     );
   } else {
@@ -69,7 +71,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
       cartLinePercentage: parseFloat(configuration.cartLinePercentage),
       orderPercentage: parseFloat(configuration.orderPercentage),
       deliveryPercentage: parseFloat(configuration.deliveryPercentage),
-      collectionIds: configuration.collectionIds || [],
+      productIds: configuration.productIds || [],
+      quantity: parseInt(configuration.quantity || "1", 10),
     });
   }
 
@@ -108,8 +111,8 @@ export default function VolumeNew() {
     title: "",
     method: DiscountMethod.Automatic,
     code: "",
-    quantity: "1",
-    discountClasses: [],
+    quantity: "2",
+    discountClasses: [DiscountClass.Product],
     combinesWith: {
       orderDiscounts: false,
       productDiscounts: false,
@@ -121,10 +124,10 @@ export default function VolumeNew() {
     endsAt: null,
     configuration: {
       cartLinePercentage: "0",
-      quantity: "1",
+      quantity: "2",
       orderPercentage: "0",
       deliveryPercentage: "0",
-      collectionIds: [],
+      productIds: [],
     },
   };
 

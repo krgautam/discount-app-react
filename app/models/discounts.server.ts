@@ -6,7 +6,7 @@ import {
   GET_DISCOUNT,
 } from "../graphql/discounts";
 import { authenticate } from "../shopify.server";
-import type { DiscountClass } from "../types/admin.types";
+import type { DiscountClass } from "../types/admin.types.d";
 import { DiscountMethod } from "../types/types";
 
 interface BaseDiscount {
@@ -26,7 +26,8 @@ interface DiscountConfiguration {
   cartLinePercentage: number;
   orderPercentage: number;
   deliveryPercentage: number;
-  collectionIds?: string[];
+  productIds?: string[];
+  quantity?: number;
 }
 
 interface UserError {
@@ -54,14 +55,13 @@ export async function createCodeDiscount(
         appliesOncePerCustomer,
         metafields: [
           {
-            namespace: "$app:example-discounts--ui-extension",
-            key: "function-configuration",
+            namespace: "volume_discount",
+            key: "rules",
             type: "json",
             value: JSON.stringify({
-              cartLinePercentage: configuration.cartLinePercentage,
-              orderPercentage: configuration.orderPercentage,
-              deliveryPercentage: configuration.deliveryPercentage,
-              collectionIds: configuration.collectionIds || [],
+              products: configuration.productIds || [],
+              minQty: configuration.quantity || 1,
+              percentOff: configuration.cartLinePercentage || 0,
             }),
           },
         ],
@@ -89,14 +89,13 @@ export async function createAutomaticDiscount(
         ...baseDiscount,
         metafields: [
           {
-            namespace: "$app:example-discounts--ui-extension",
-            key: "function-configuration",
+            namespace: "volume_discount",
+            key: "rules",
             type: "json",
             value: JSON.stringify({
-              cartLinePercentage: configuration.cartLinePercentage,
-              orderPercentage: configuration.orderPercentage,
-              deliveryPercentage: configuration.deliveryPercentage,
-              collectionIds: configuration.collectionIds || [],
+              products: configuration.productIds || [],
+              minQty: configuration.quantity || 1,
+              percentOff: configuration.cartLinePercentage || 0,
             }),
           },
         ],
@@ -123,7 +122,8 @@ export async function updateCodeDiscount(
     cartLinePercentage: number;
     orderPercentage: number;
     deliveryPercentage: number;
-    collectionIds?: string[];
+    productIds?: string[];
+    quantity?: number;
   },
 ) {
   const { admin } = await authenticate.admin(request);
@@ -144,13 +144,9 @@ export async function updateCodeDiscount(
           {
             id: configuration.metafieldId,
             value: JSON.stringify({
-              cartLinePercentage: configuration.cartLinePercentage,
-              orderPercentage: configuration.orderPercentage,
-              deliveryPercentage: configuration.deliveryPercentage,
-              collectionIds:
-                configuration.collectionIds?.map((id) =>
-                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`,
-                ) || [],
+              products: configuration.productIds || [],
+              minQty: configuration.quantity || 1,
+              percentOff: configuration.cartLinePercentage || 0,
             }),
           },
         ],
@@ -173,7 +169,8 @@ export async function updateAutomaticDiscount(
     cartLinePercentage: number;
     orderPercentage: number;
     deliveryPercentage: number;
-    collectionIds?: string[];
+    productIds?: string[];
+    quantity?: number;
   },
 ) {
   const { admin } = await authenticate.admin(request);
@@ -190,13 +187,9 @@ export async function updateAutomaticDiscount(
           {
             id: configuration.metafieldId,
             value: JSON.stringify({
-              cartLinePercentage: configuration.cartLinePercentage,
-              orderPercentage: configuration.orderPercentage,
-              deliveryPercentage: configuration.deliveryPercentage,
-              collectionIds:
-                configuration.collectionIds?.map((id) =>
-                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`,
-                ) || [],
+              products: configuration.productIds || [],
+              minQty: configuration.quantity || 1,
+              percentOff: configuration.cartLinePercentage || 0,
             }),
           },
         ],
@@ -257,7 +250,11 @@ export async function getDiscount(request: Request, id: string) {
       startsAt,
       endsAt,
       configuration: {
-        ...configuration,
+        productIds: configuration.products || [],
+        quantity: String(configuration.minQty || 1),
+        cartLinePercentage: String(configuration.percentOff || 0),
+        orderPercentage: "0",
+        deliveryPercentage: "0",
         metafieldId: responseJson.data.discountNode.configurationField.id,
       },
     },

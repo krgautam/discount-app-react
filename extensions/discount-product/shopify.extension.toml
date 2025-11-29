@@ -1,0 +1,19 @@
+api_version = "2025-10"
+[[extensions]]
+name = "t:name"
+handle = "discount-product"
+type = "ui_extension"
+uid = "6e59c12b-7beb-fac2-ccd1-71df6b00b65745e7a231"
+
+# Both extension points are required
+[[extensions.targeting]]
+module = "./src/ProductDetailsConfigurationExtension.jsx"
+target = "admin.product-details.configuration.render"
+[extensions.targeting.urls]
+edit = "/bundles/products/{product_id}"
+
+
+[[extensions.targeting]]
+module = "./src/ProductVariantDetailsConfigurationExtension.jsx"
+# The target used here must match the target used in the module file (./src/ProductVariantDetailsConfigurationExtension.jsx)
+target = "admin.product-variant-details.configuration.render"

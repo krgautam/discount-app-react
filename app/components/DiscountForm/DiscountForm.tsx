@@ -5,8 +5,7 @@ import { Form } from "react-router";
 import { useDiscountForm } from "../../hooks/useDiscountForm";
 import { DiscountClass } from "../../types/admin.types.d";
 import { DiscountMethod } from "../../types/types";
-import { CollectionPicker } from "../CollectionPicker/CollectionPicker";
-import { DatePickerField } from "../DatePickerField/DatePickerField";
+import { ProductPicker } from "../ProductPicker/ProductPicker";
 
 interface SubmitError {
   message: string;
@@ -33,7 +32,7 @@ interface DiscountFormProps {
       orderPercentage: string;
       deliveryPercentage: string;
       metafieldId?: string;
-      collectionIds?: string[];
+      productIds?: string[];
       quantity: string;
     };
   };
@@ -56,19 +55,13 @@ export function DiscountForm({
   submitErrors = [],
   success = false,
 }: DiscountFormProps) {
-  const { formState, setField, setConfigField, setCombinesWith, submit } =
+  const { formState, setField, setConfigField, submit } =
     useDiscountForm({
       initialData,
     });
 
-  const [collections, setCollections] =
-    useState<DiscountFormProps["collections"]>(initialCollections);
-
-  const today = useMemo(() => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    return date;
-  }, []);
+  const [products, setProducts] =
+    useState<{ id: string; title: string }[]>([]);
 
   const errorBanner = useMemo(
     () =>
@@ -97,71 +90,16 @@ export function DiscountForm({
     [success],
   );
 
-  const handleCollectionSelect = useCallback(
-    async (selectedCollections: { id: string; title: string }[]) => {
+  const handleProductSelect = useCallback(
+    async (selectedProducts: { id: string; title: string }[]) => {
       setConfigField(
-        "collectionIds",
-        selectedCollections.map((collection) => collection.id),
+        "productIds",
+        selectedProducts.map((product) => product.id),
       );
-      setCollections(selectedCollections);
+      setProducts(selectedProducts);
     },
     [setConfigField],
   );
-
-  const handleDiscountClassChange = useCallback(
-    (discountClassValue: DiscountClass, checked: boolean) => {
-      setField(
-        "discountClasses",
-        checked
-          ? [...formState.discountClasses, discountClassValue]
-          : formState.discountClasses.filter(
-              (discountClass) => discountClass !== discountClassValue,
-            ),
-      );
-    },
-    [formState.discountClasses, setField],
-  );
-
-  const handleEndDateCheckboxChange = useCallback(
-    (checked: boolean) => {
-      if (!checked) {
-        setField("endDate", null);
-      } else if (!formState.endDate) {
-        const tomorrow = new Date(formState.startDate || today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        setField("endDate", tomorrow);
-      }
-    },
-    [formState.startDate, formState.endDate, today, setField],
-  );
-
-  const handleDateChange = useCallback(
-    (date: Date | [Date, Date]) => {
-      if (Array.isArray(date)) {
-        // Range mode
-        setField("startDate", date[0]);
-        setField("endDate", date[1]);
-      } else {
-        // Single mode
-        setField("startDate", date);
-        if (formState.endDate) {
-          setField("endDate", null);
-        }
-      }
-    },
-    [setField, formState.endDate],
-  );
-
-  const getDatePickerValue = useCallback(():
-    | Date
-    | string
-    | null
-    | [Date | string | null, Date | string | null] => {
-    if (formState.endDate) {
-      return [formState.startDate, formState.endDate];
-    }
-    return formState.startDate;
-  }, [formState.startDate, formState.endDate]);
 
   const handleReset = useCallback(() => {
     returnToDiscounts();
@@ -205,7 +143,7 @@ export function DiscountForm({
             deliveryPercentage: parseFloat(
               formState.configuration.deliveryPercentage,
             ),
-            collectionIds: formState.configuration.collectionIds || [],
+            productIds: formState.configuration.productIds || [],
           },
         })}
       />
@@ -248,121 +186,41 @@ export function DiscountForm({
             )}
           </s-section>
 
-          {/* Discount classes section */}
-
-          {/* [START build-the-ui.add-discount-classes] */}
-          <s-section heading="Discount Classes">
-            <s-text>Select which types of discounts to apply</s-text>
-
-            <s-stack gap="base">
-              <s-checkbox
-                label="Product discount"
-                checked={formState.discountClasses.includes(
-                  DiscountClass.Product,
-                )}
-                onChange={(e: any) =>
-                  handleDiscountClassChange(
-                    DiscountClass.Product,
-                    e.target.checked,
-                  )
-                }
-              />
-              <s-checkbox
-                label="Order discount"
-                checked={formState.discountClasses.includes(
-                  DiscountClass.Order,
-                )}
-                onChange={(e: any) =>
-                  handleDiscountClassChange(
-                    DiscountClass.Order,
-                    e.target.checked,
-                  )
-                }
-              />
-              <s-checkbox
-                label="Shipping discount"
-                checked={formState.discountClasses.includes(
-                  DiscountClass.Shipping,
-                )}
-                onChange={(e: any) =>
-                  handleDiscountClassChange(
-                    DiscountClass.Shipping,
-                    e.target.checked,
-                  )
-                }
-              />
-            </s-stack>
-          </s-section>
-          {/* [END build-the-ui.add-discount-classes] */}
-
-          {/* [START build-the-ui.add-discount-configuration] */}
+          {/* Discount Configuration */}
           <s-section heading="Discount Configuration">
             <s-stack gap="base">
-              {formState.discountClasses?.includes(DiscountClass.Product) ? (
-                <>
-                  <s-number-field
-                    label="Minimum quantity"
-                    autocomplete="on"
-                    min={1}
-                    value={formState.configuration.quantity ?? "1"}
-                    onChange={(e: any) =>
-                      setConfigField("quantity", e.target.value)
-                    }
-                  />
-                  <s-number-field
-                    label="Product discount percentage"
-                    autocomplete="on"
-                    min={0}
-                    max={100}
-                    suffix="%"
-                    value={formState.configuration.cartLinePercentage}
-                    onChange={(e: any) =>
-                      setConfigField("cartLinePercentage", e.target.value)
-                    }
-                  />
-                  <CollectionPicker
-                    onSelect={handleCollectionSelect}
-                    selectedCollectionIds={
-                      formState.configuration.collectionIds || []
-                    }
-                    collections={
-                      formState.configuration.collections || collections
-                    }
-                    buttonText="Select collections for discount"
-                  />
-                </>
-              ) : null}
-
-              {formState.discountClasses?.includes(DiscountClass.Order) ? (
-                <s-number-field
-                  label="Order discount percentage"
-                  autocomplete="on"
-                  min={0}
-                  max={100}
-                  suffix="%"
-                  value={formState.configuration.orderPercentage}
-                  onChange={(e: any) =>
-                    setConfigField("orderPercentage", e.target.value)
-                  }
-                />
-              ) : null}
-
-              {formState.discountClasses?.includes(DiscountClass.Shipping) ? (
-                <s-number-field
-                  label="Shipping discount percentage"
-                  autocomplete="on"
-                  min={0}
-                  max={100}
-                  suffix="%"
-                  value={formState.configuration.deliveryPercentage}
-                  onChange={(e: any) =>
-                    setConfigField("deliveryPercentage", e.target.value)
-                  }
-                />
-              ) : null}
+              <s-number-field
+                label="Minimum quantity"
+                autocomplete="on"
+                min={2}
+                value={formState.configuration.quantity ?? "2"}
+                onChange={(e: any) =>
+                  setConfigField("quantity", e.target.value)
+                }
+              />
+              <s-number-field
+                label="Product discount percentage"
+                autocomplete="on"
+                min={1}
+                max={80}
+                suffix="%"
+                value={formState.configuration.cartLinePercentage}
+                onChange={(e: any) =>
+                  setConfigField("cartLinePercentage", e.target.value)
+                }
+              />
+              <ProductPicker
+                onSelect={handleProductSelect}
+                selectedProductIds={
+                  formState.configuration.productIds || []
+                }
+                products={
+                  formState.configuration.products || products
+                }
+                buttonText="Select products for discount"
+              />
             </s-stack>
           </s-section>
-          {/* [END build-the-ui.add-discount-configuration] */}
 
           {/* Usage limits section */}
           {formState.method === DiscountMethod.Code ? (
@@ -384,58 +242,6 @@ export function DiscountForm({
               />
             </s-section>
           ) : null}
-
-          {/* Combination section */}
-          <s-section heading="Combination">
-            <s-text>
-              Select which discounts can be combined with this discount
-            </s-text>
-
-            <s-checkbox
-              label="Order discounts"
-              checked={formState.combinesWith.orderDiscounts}
-              onChange={(e: any) =>
-                setCombinesWith("orderDiscounts", e.target.checked)
-              }
-            />
-
-            <s-checkbox
-              label="Product discounts"
-              checked={formState.combinesWith.productDiscounts}
-              onChange={(e: any) =>
-                setCombinesWith("productDiscounts", e.target.checked)
-              }
-            />
-
-            <s-checkbox
-              label="Shipping discounts"
-              checked={formState.combinesWith.shippingDiscounts}
-              onChange={(e: any) =>
-                setCombinesWith("shippingDiscounts", e.target.checked)
-              }
-            />
-          </s-section>
-
-          {/* Active dates section */}
-          <s-section heading="Active dates">
-            <s-stack gap="base">
-              <DatePickerField
-                label={formState.endDate ? "Date range" : "Start date"}
-                type={formState.endDate ? "range" : "single"}
-                value={getDatePickerValue()}
-                onChange={handleDateChange}
-                minDate={today}
-              />
-
-              <s-checkbox
-                label="Set end date"
-                checked={!!formState.endDate}
-                onChange={(e: any) =>
-                  handleEndDateCheckboxChange(e.target.checked)
-                }
-              />
-            </s-stack>
-          </s-section>
         </s-stack>
       </s-stack>
     </Form>

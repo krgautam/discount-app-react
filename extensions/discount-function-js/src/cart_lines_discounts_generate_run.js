@@ -25,38 +25,45 @@ export function cartLinesDiscountsGenerateRun(input) {
     return {operations: []};
   }
 
-  const { cartLinePercentage, collectionIds, quantity } = parseMetafield(
+  const { products, minQty, percentOff } = parseMetafield(
     input.discount.metafield,
   );
 
-  if (cartLinePercentage === 0) {
+  if (!products || products.length === 0 || percentOff === 0) {
     return {operations: []};
   }
 
-  const minimumQuantity = quantity || 1;
+  const minimumQuantity = minQty || 1;
 
+  // Filter cart lines that match the configured products and meet minimum quantity
   const qualifyingLines = input.cart.lines.filter((line) => {
+    // Check minimum quantity requirement
     if (line.quantity < minimumQuantity) {
       return false;
     }
 
+    // Must be a product variant
     if (line.merchandise.__typename !== 'ProductVariant') {
       return false;
     }
 
-    // Note: Collection filtering would require GraphQL variables which aren't supported
-    // For now, we apply the discount to all products meeting the quantity requirement
-    // Collection filtering can be added later if needed through a different mechanism
+    // Check if the product ID matches any of the configured products
+    const productId = line.merchandise.product?.id;
+    if (!productId) {
+      return false;
+    }
 
-    return true;
+    // Check if product is in the configured products list
+    return products.includes(productId);
   });
 
   if (qualifyingLines.length === 0) {
     return {operations: []};
   }
 
+  // Create discount candidates for qualifying lines
   const candidates = qualifyingLines.map((line) => ({
-    message: `${cartLinePercentage}% OFF`,
+    message: `${percentOff}% OFF`,
     targets: [
       {
         cartLine: {
@@ -66,7 +73,7 @@ export function cartLinesDiscountsGenerateRun(input) {
     ],
     value: {
       percentage: {
-        value: cartLinePercentage,
+        value: percentOff,
       },
     },
   }));
@@ -85,22 +92,26 @@ export function cartLinesDiscountsGenerateRun(input) {
 
 function parseMetafield(metafield) {
   try {
+    if (!metafield || !metafield.value) {
+      return {
+        products: [],
+        minQty: 1,
+        percentOff: 0,
+      };
+    }
+
     const value = JSON.parse(metafield.value);
     return {
-      cartLinePercentage: value.cartLinePercentage || 0,
-      orderPercentage: value.orderPercentage || 0,
-      deliveryPercentage: value.deliveryPercentage || 0,
-      collectionIds: value.collectionIds || [],
-      quantity: value.quantity || 2,
+      products: value.products || [],
+      minQty: value.minQty || 1,
+      percentOff: value.percentOff || 0,
     };
   } catch (error) {
     console.error('Error parsing metafield', error);
     return {
-      cartLinePercentage: 0,
-      orderPercentage: 0,
-      deliveryPercentage: 0,
-      collectionIds: [],
-      quantity: 1,
+      products: [],
+      minQty: 1,
+      percentOff: 0,
     };
   }
 }

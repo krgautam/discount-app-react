@@ -4,8 +4,8 @@ export const GET_DISCOUNT = `
     discountNode(id: $id) {
       id
       configurationField: metafield(
-        namespace: "$app:example-discounts--ui-extension"
-        key: "function-configuration"
+        namespace: "volume_discount"
+        key: "rules"
       ) {
         id
         value
