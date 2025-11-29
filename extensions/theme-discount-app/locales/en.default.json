@@ -6,5 +6,10 @@
     "home": {
       "recommendationText": "Recommended Product!"
     }
+  },
+  "volume_discount": {
+    "banner": {
+      "message": "Buy {{minQty}} products and get {{percentOff}}% OFF"
+    }
   }
 }

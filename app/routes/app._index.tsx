@@ -1,6 +1,7 @@
-import { type LoaderFunctionArgs, useLoaderData } from "react-router";
+import { type ActionFunctionArgs, type LoaderFunctionArgs, useLoaderData, useActionData, useSubmit } from "react-router";
 
 import { getFunctions } from "../models/functions.server";
+import { syncDiscountRulesToShop } from "../models/discounts.server";
 import { returnToDiscounts } from "../utils/navigation";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -8,16 +9,69 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return { functions };
 };
 
-export async function action() {}
+export async function action({ request }: ActionFunctionArgs) {
+  if (request.method === "POST") {
+    const formData = await request.formData();
+    if (formData.get("action") === "sync") {
+      try {
+        const result = await syncDiscountRulesToShop(request);
+        return { 
+          syncSuccess: true, 
+          syncMessage: `Synced ${result?.rulesCount || 0} discount rule(s) to shop metafield`,
+          rulesCount: result?.rulesCount || 0
+        };
+      } catch (error) {
+        return { 
+          syncSuccess: false, 
+          syncMessage: error instanceof Error ? error.message : "Failed to sync discount rules"
+        };
+      }
+    }
+  }
+  return {};
+}
 
 export default function Index() {
   const { functions } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const submit = useSubmit();
+
+  const handleSync = () => {
+    const formData = new FormData();
+    formData.append("action", "sync");
+    submit(formData, { method: "post" });
+  };
 
   return (
     <s-page>
       <ui-title-bar title="Discount Functions">
         <button onClick={returnToDiscounts}>View all discounts</button>
       </ui-title-bar>
+
+      {actionData?.syncMessage && (
+        <s-banner
+          status={actionData.syncSuccess ? "success" : "critical"}
+          title={actionData.syncSuccess ? "Sync Successful" : "Sync Failed"}
+        >
+          {actionData.syncMessage}
+        </s-banner>
+      )}
+
+      <s-section>
+        <s-box padding="base" borderRadius="base">
+          <s-grid gap="base" alignItems="center" gridTemplateColumns="1fr auto">
+            <div>
+              <s-heading>Sync Discount Rules</s-heading>
+              <s-text tone="subdued">
+                Sync all active discount rules to shop metafield for theme access
+              </s-text>
+            </div>
+            <s-button onClick={handleSync} variant="primary">
+              Sync Now
+            </s-button>
+          </s-grid>
+        </s-box>
+      </s-section>
 
       {functions.length === 0 ? (
         <s-section accessibilityLabel="Empty state section">

@@ -108,3 +108,58 @@ export const CREATE_AUTOMATIC_DISCOUNT = `
     }
   }
 `;
+
+export const GET_ALL_DISCOUNTS = `
+  query GetAllDiscounts {
+    discountNodes(first: 250) {
+      nodes {
+        id
+        discount {
+          __typename
+          ... on DiscountAutomaticApp {
+            startsAt
+            endsAt
+          }
+          ... on DiscountCodeApp {
+            startsAt
+            endsAt
+          }
+        }
+        configurationField: metafield(
+          namespace: "volume_discount"
+          key: "rules"
+        ) {
+          value
+        }
+      }
+    }
+  }
+`;
+
+export const GET_SHOP = `
+  query GetShop {
+    shop {
+      id
+      metafield(namespace: "volume_discount", key: "rules") {
+        id
+        value
+      }
+    }
+  }
+`;
+
+export const UPDATE_SHOP_METAFIELD = `
+  mutation UpdateShopMetafield($metafields: [MetafieldsSetInput!]!) {
+    metafieldsSet(metafields: $metafields) {
+      metafields {
+        id
+        namespace
+        key
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;

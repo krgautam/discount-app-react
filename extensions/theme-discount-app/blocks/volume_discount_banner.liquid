@@ -1,0 +1,122 @@
+{%- comment -%}
+  Volume Discount Banner Block
+  Fetches discount rules from shop metafields and displays banner if current product is configured
+{%- endcomment -%}
+
+{%- comment -%}
+  Volume Discount Banner Block
+  Fetches discount rules from shop metafields and displays banner if current product is configured
+{%- endcomment -%}
+
+{%- assign discount_rules_metafield = shop.metafields.volume_discount.rules -%}
+
+{%- comment -%} DEBUG: Remove this section after testing {%- endcomment -%}
+{%- if discount_rules_metafield -%}
+  <!-- DEBUG: Metafield exists -->
+{%- else -%}
+  <!-- DEBUG: Metafield does NOT exist. Make sure syncDiscountRulesToShop has been called. -->
+{%- endif -%}
+
+{%- if discount_rules_metafield -%}
+  {%- assign rules_data = discount_rules_metafield.value -%}
+  
+  {%- comment -%} DEBUG: Check what we got {%- endcomment -%}
+  {%- if rules_data == blank -%}
+    <!-- DEBUG: rules_data is blank -->
+  {%- else -%}
+    <!-- DEBUG: rules_data exists, type check: first={{ rules_data.first }}, products={{ rules_data.products }} -->
+  {%- endif -%}
+
+  {%- if rules_data -%}
+    {%- assign current_product_gid = product.id -%}
+    
+    {%- comment -%} Ensure product ID is in GID format {%- endcomment -%}
+    {%- unless current_product_gid contains 'gid://' -%}
+      {%- assign current_product_gid = current_product_gid | prepend: 'gid://shopify/Product/' -%}
+    {%- endunless -%}
+    
+    <!-- DEBUG: Current product GID: {{ current_product_gid }} -->
+    
+    {%- assign product_found = false -%}
+    {%- assign min_qty = null -%}
+    {%- assign percent_off = null -%}
+
+    {%- comment -%} Handle array of rules {%- endcomment -%}
+    {%- if rules_data.first -%}
+      {%- comment -%} Array format: [{products: [...], minQty: X, percentOff: Y}, ...] {%- endcomment -%}
+      <!-- DEBUG: Processing array format with {{ rules_data.size }} rules -->
+      {%- for rule in rules_data -%}
+        {%- if rule.products -%}
+          <!-- DEBUG: Checking rule with {{ rule.products.size }} products -->
+          {%- for product_gid in rule.products -%}
+            <!-- DEBUG: Comparing {{ product_gid }} with {{ current_product_gid }} -->
+            {%- if product_gid == current_product_gid -%}
+              {%- assign product_found = true -%}
+              {%- assign min_qty = rule.minQty -%}
+              {%- assign percent_off = rule.percentOff -%}
+              <!-- DEBUG: MATCH FOUND! minQty={{ min_qty }}, percentOff={{ percent_off }} -->
+              {%- break -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- if product_found -%}
+            {%- break -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- elsif rules_data.products -%}
+      {%- comment -%} Single rule object format: {products: [...], minQty: X, percentOff: Y} {%- endcomment -%}
+      <!-- DEBUG: Processing single rule format with {{ rules_data.products.size }} products -->
+      {%- for product_gid in rules_data.products -%}
+        <!-- DEBUG: Comparing {{ product_gid }} with {{ current_product_gid }} -->
+        {%- if product_gid == current_product_gid -%}
+          {%- assign product_found = true -%}
+          {%- assign min_qty = rules_data.minQty -%}
+          {%- assign percent_off = rules_data.percentOff -%}
+          <!-- DEBUG: MATCH FOUND! minQty={{ min_qty }}, percentOff={{ percent_off }} -->
+          {%- break -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- else -%}
+      <!-- DEBUG: rules_data format not recognized. rules_data={{ rules_data | json }} -->
+    {%- endif -%}
+
+    <!-- DEBUG: Final check - product_found={{ product_found }}, min_qty={{ min_qty }}, percent_off={{ percent_off }} -->
+
+    {%- if product_found and min_qty != null and percent_off != null -%}
+      <div class="volume-discount-banner" style="
+        background-color: #f0f8ff;
+        border: 2px solid #0066cc;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 20px 0;
+        text-align: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      ">
+        <p style="
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #0066cc;
+        ">
+          {{ 'volume_discount.banner.message' | t: minQty: min_qty, percentOff: percent_off }}
+        </p>
+      </div>
+    {%- else -%}
+      <!-- DEBUG: Banner not shown. product_found={{ product_found }}, min_qty={{ min_qty }}, percent_off={{ percent_off }} -->
+    {%- endif -%}
+  {%- endif -%}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Volume Discount Banner",
+  "target": "section",
+  "settings": [
+    {
+      "type": "paragraph",
+      "content": "Displays a banner when the current product is configured in volume discount rules. Configure discounts in the Discounts section of the app."
+    }
+  ]
+}
+{% endschema %}
+
